@@ -16,7 +16,7 @@ function getGroqClient(): Groq {
 }
 
 /**
- * Analyze food image using Groq Vision (Llama 3.2 Vision)
+ * Analyze food image using Groq Vision (Llama 4 Scout - multimodal)
  * Identifies the food, estimates calories and sodium, and assesses BP impact
  */
 export async function analyzeFood(imageBuffer: Buffer): Promise<FoodAnalysis> {
@@ -28,29 +28,8 @@ export async function analyzeFood(imageBuffer: Buffer): Promise<FoodAnalysis> {
     const mimeType = "image/jpeg";
 
     const response = await groq.chat.completions.create({
-      model: "llama-3.2-90b-vision-preview",
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
       messages: [
-        {
-          role: "system",
-          content: `You are a food nutrition analysis expert. Analyze the food image and return ONLY a valid JSON object with the following fields:
-{
-  "foodName": "name of the food/meal identified",
-  "calories": estimated calories (number),
-  "sodium": estimated sodium in mg (number),
-  "potassium": estimated potassium in mg (number),
-  "fiber": estimated fiber in g (number),
-  "bpImpact": "low" | "moderate" | "high" (based on sodium, saturated fat, and overall cardiovascular impact),
-  "details": "brief 1-2 sentence description of the meal and its cardiovascular impact"
-}
-
-Guidelines for bpImpact:
-- "high": sodium > 1500mg, or high saturated fat, processed/fried foods, heavy red meat
-- "moderate": sodium 800-1500mg, mixed nutritional profile
-- "low": sodium < 800mg, fruits, vegetables, lean protein, whole grains
-
-Be specific about the food name. If you see Nigerian/African food, name it properly (e.g., "Jollof Rice with Fried Plantain", "Amala with Ewedu and Gbegiri", "Suya").
-Return ONLY the JSON object, no other text.`,
-        },
         {
           role: "user",
           content: [
@@ -62,7 +41,28 @@ Return ONLY the JSON object, no other text.`,
             },
             {
               type: "text",
-              text: "Identify this food and analyze its nutritional content, especially sodium and cardiovascular impact.",
+              text: `You are a food nutrition analysis expert. Analyze this food image carefully.
+
+Identify the food/meal shown and estimate its nutritional content.
+
+Return ONLY a valid JSON object (no markdown, no code blocks, no extra text) with exactly these fields:
+{
+  "foodName": "specific name of the food/meal",
+  "calories": estimated total calories as a number,
+  "sodium": estimated sodium in mg as a number,
+  "potassium": estimated potassium in mg as a number,
+  "bpImpact": "low" or "moderate" or "high",
+  "details": "1-2 sentence description of the meal and its cardiovascular health impact"
+}
+
+Guidelines for bpImpact:
+- "high": sodium > 1500mg, fried foods, processed meats, heavy salt
+- "moderate": sodium 800-1500mg, mixed nutritional profile
+- "low": sodium < 800mg, fruits, vegetables, lean protein, whole grains
+
+If you see Nigerian/African food, name it properly (e.g. "Boiled Yam with Fried Egg", "Jollof Rice", "Amala with Ewedu", "Suya", "Pounded Yam with Egusi Soup").
+
+IMPORTANT: Return ONLY the JSON object. No other text before or after it.`,
             },
           ],
         },
@@ -72,12 +72,18 @@ Return ONLY the JSON object, no other text.`,
     });
 
     const content = response.choices[0].message.content || "{}";
+    console.log("[Food Analysis] Raw response:", content);
 
-    // Extract JSON from response (handle markdown code blocks)
-    let jsonStr = content;
-    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+    // Extract JSON from response (handle markdown code blocks if any)
+    let jsonStr = content.trim();
+    const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (jsonMatch) {
       jsonStr = jsonMatch[1].trim();
+    }
+    // Also handle case where response starts with text before JSON
+    const braceMatch = jsonStr.match(/\{[\s\S]*\}/);
+    if (braceMatch) {
+      jsonStr = braceMatch[0];
     }
 
     const parsed = JSON.parse(jsonStr);
@@ -108,16 +114,16 @@ Return ONLY the JSON object, no other text.`,
       message,
     };
   } catch (error: any) {
-    console.error("Food analysis error:", error.message);
+    console.error("[Food Analysis] Primary model error:", error.message);
 
-    // If vision model fails, provide a helpful fallback
-    if (error.message?.includes("model")) {
-      // Try with smaller vision model
-      try {
-        return await analyzeFoodFallback(imageBuffer);
-      } catch {
-        // Final fallback
-      }
+    // Try fallback with Maverick model
+    try {
+      return await analyzeFoodFallback(imageBuffer);
+    } catch (fallbackError: any) {
+      console.error(
+        "[Food Analysis] Fallback model error:",
+        fallbackError.message
+      );
     }
 
     return {
@@ -130,19 +136,15 @@ Return ONLY the JSON object, no other text.`,
 }
 
 /**
- * Fallback: use smaller vision model
+ * Fallback: use Maverick model (more capable but slower)
  */
 async function analyzeFoodFallback(imageBuffer: Buffer): Promise<FoodAnalysis> {
   const groq = getGroqClient();
   const base64Image = imageBuffer.toString("base64");
 
   const response = await groq.chat.completions.create({
-    model: "llama-3.2-11b-vision-preview",
+    model: "meta-llama/llama-4-maverick-17b-128e-instruct",
     messages: [
-      {
-        role: "system",
-        content: `Identify the food in this image. Return ONLY valid JSON: {"foodName":"name","calories":number,"sodium":number,"bpImpact":"low"|"moderate"|"high","details":"brief description"}`,
-      },
       {
         role: "user",
         content: [
@@ -154,7 +156,7 @@ async function analyzeFoodFallback(imageBuffer: Buffer): Promise<FoodAnalysis> {
           },
           {
             type: "text",
-            text: "What food is this? Estimate nutritional values.",
+            text: `Identify this food and estimate its nutritional content. Return ONLY valid JSON: {"foodName":"name","calories":number,"sodium":number,"bpImpact":"low"|"moderate"|"high","details":"brief description"}`,
           },
         ],
       },
@@ -164,10 +166,16 @@ async function analyzeFoodFallback(imageBuffer: Buffer): Promise<FoodAnalysis> {
   });
 
   const content = response.choices[0].message.content || "{}";
-  let jsonStr = content;
-  const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+  console.log("[Food Analysis Fallback] Raw response:", content);
+
+  let jsonStr = content.trim();
+  const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (jsonMatch) {
     jsonStr = jsonMatch[1].trim();
+  }
+  const braceMatch = jsonStr.match(/\{[\s\S]*\}/);
+  if (braceMatch) {
+    jsonStr = braceMatch[0];
   }
 
   const parsed = JSON.parse(jsonStr);
