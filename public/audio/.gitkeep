@@ -1,0 +1,3 @@
+# This directory will contain pre-generated audio files
+# Run: npm run generate-audio
+
