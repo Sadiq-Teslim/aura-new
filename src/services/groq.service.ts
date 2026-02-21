@@ -33,7 +33,7 @@ export async function transcribeAudio(audioFile: File): Promise<{
 
     return {
       text: transcription.text,
-      language: transcription.language || "en",
+      language: (transcription as any).language || "en",
     };
   } catch (error: any) {
     throw new Error(`Groq transcription failed: ${error.message}`);
@@ -84,7 +84,7 @@ export async function generateResponse(
       }
     }
 
-    const systemPrompt = `You are Aura, a warm and proactive cardiovascular health companion
+    const systemPrompt = `You are Cor, a warm and proactive cardiovascular health companion
 for African professionals. You speak like a knowledgeable friend, never a doctor.
 
 CRITICAL RULES:
@@ -194,7 +194,7 @@ export async function generateProactiveAlert(
   healthContext: HealthContext
 ): Promise<string> {
   try {
-    const systemPrompt = `You are Aura, a proactive cardiovascular health companion.
+    const systemPrompt = `You are Cor, a proactive cardiovascular health companion.
 
 The user's cardiovascular stress has been worsening for ${healthContext.worseningDays} consecutive days. 
 Their CSS score is ${healthContext.css}/100, which indicates elevated risk.

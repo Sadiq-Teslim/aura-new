@@ -99,16 +99,19 @@ class SupabaseStore {
 
   // Reading operations
   async addReading(userId: string, reading: DailyReading): Promise<void> {
-    const { error } = await supabase.from("readings").insert({
-      user_id: userId,
-      date: reading.date,
-      hrv: reading.hrv,
-      heart_rate: reading.heartRate,
-      sedentary_hours: reading.sedentaryHours,
-      sleep_quality: reading.sleepQuality,
-      screen_stress_index: reading.screenStressIndex,
-      food_impact: reading.foodImpact,
-    });
+    const { error } = await supabase.from("readings").upsert(
+      {
+        user_id: userId,
+        date: reading.date,
+        hrv: reading.hrv,
+        heart_rate: reading.heartRate,
+        sedentary_hours: reading.sedentaryHours,
+        sleep_quality: reading.sleepQuality,
+        screen_stress_index: reading.screenStressIndex,
+        food_impact: reading.foodImpact,
+      },
+      { onConflict: "user_id,date" }
+    );
 
     if (error) throw new Error(`Failed to add reading: ${error.message}`);
   }

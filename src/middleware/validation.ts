@@ -23,14 +23,20 @@ export const validate = (validations: any[]) => {
 
 // Common validation rules
 export const readingValidation = [
-  body("hrv").isNumeric().withMessage("HRV must be a number"),
+  body("hrv").toFloat().isFloat().withMessage("HRV must be a number"),
   body("sedentaryHours")
-    .isNumeric()
+    .optional()
+    .toFloat()
+    .isFloat()
     .withMessage("Sedentary hours must be a number"),
   body("sleepQuality")
-    .isNumeric()
+    .optional()
+    .toInt()
     .isInt({ min: 0, max: 10 })
     .withMessage("Sleep quality must be between 0 and 10"),
+  body("heartRate").optional().toInt().isInt().withMessage("Heart rate must be a number"),
+  body("screenStressIndex").optional().toFloat().isFloat().withMessage("Screen stress index must be a number"),
+  body("foodImpact").optional().toFloat().isFloat().withMessage("Food impact must be a number"),
   body("date").optional().isISO8601().withMessage("Date must be ISO8601 format"),
 ];
 

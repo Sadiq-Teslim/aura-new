@@ -154,7 +154,7 @@ router.post("/clinical-share", async (req: Request, res: Response) => {
     const margin = 50;
 
     // Title
-    page.drawText("Aura Health Report", {
+    page.drawText("Cor Health Report", {
       x: margin,
       y,
       size: 24,
@@ -292,7 +292,7 @@ router.post("/clinical-share", async (req: Request, res: Response) => {
     const pdfBytes = await pdfDoc.save();
 
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="aura-report-${userId}.pdf"`);
+    res.setHeader("Content-Disposition", `attachment; filename="cor-report-${userId}.pdf"`);
     res.send(Buffer.from(pdfBytes));
   } catch (error: any) {
     res.status(500).json({

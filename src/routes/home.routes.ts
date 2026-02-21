@@ -40,7 +40,7 @@ router.get("/data", async (req: Request, res: Response) => {
     }
 
     // Generate health pulse (plain language status)
-    let healthPulse = "Welcome to Aura. Let's get your first reading.";
+    let healthPulse = "Welcome to Cor. Let's get your first reading.";
     if (readings.length > 0 && baseline) {
       const healthContext = getHealthContext(readings, baseline);
       try {
