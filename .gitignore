@@ -9,4 +9,6 @@ temp/
 *.sql
 *.md
 !README.md
+!API-DOCS.md
 *.ps1
+Cor_cavista/
