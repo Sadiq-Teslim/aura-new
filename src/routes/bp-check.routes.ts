@@ -23,16 +23,27 @@ router.post("/", async (req: Request, res: Response) => {
     }
 
     const user = await dataStore.getUser(userId);
-    const baseline = await dataStore.getBaseline(userId);
+    let baseline = await dataStore.getBaseline(userId);
 
-    if (!user || !baseline) {
+    if (!user) {
       return res.status(404).json({
         success: false,
         error: {
-          message: "User or baseline not found",
-          code: "NOT_FOUND",
+          message: "User not found",
+          code: "USER_NOT_FOUND",
         },
       });
+    }
+
+    // If no baseline exists, create one automatically using current HRV
+    if (!baseline) {
+      baseline = {
+        hrv: hrv, // Use current HRV as baseline
+        sedentaryHours: 5,
+        sleepQuality: 7,
+      };
+      // Save the auto-generated baseline
+      await dataStore.setBaseline(userId, baseline);
     }
 
     // Estimate BP
