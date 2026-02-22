@@ -48,12 +48,9 @@ router.post(
             reading.hrv,
             baseline.hrv,
             user.age,
-            user.biologicalSex
+            user.biologicalSex,
           );
-          const category = getBPCategory(
-            estimate.systolic,
-            estimate.diastolic
-          );
+          const category = getBPCategory(estimate.systolic, estimate.diastolic);
           bpEstimate = { ...estimate, ...category };
         }
       } catch (error) {
@@ -74,7 +71,7 @@ router.post(
         error: { message: error.message, code: "READING_SAVE_ERROR" },
       });
     }
-  }
+  },
 );
 
 /**
@@ -94,7 +91,7 @@ router.get("/readings", async (req: Request, res: Response) => {
 
     const readings = await dataStore.getReadings(
       userId as string,
-      days ? parseInt(days as string) : undefined
+      days ? parseInt(days as string) : undefined,
     );
 
     res.json({
@@ -286,7 +283,7 @@ router.post("/alert", async (req: Request, res: Response) => {
 
     const alertMessage = await generateProactiveAlert(
       user.preferredLanguage,
-      healthContext as any
+      healthContext as any,
     );
 
     // Mark as alerted
@@ -343,7 +340,7 @@ router.post("/bp-estimate", async (req: Request, res: Response) => {
       hrv,
       baseline.hrv,
       user.age,
-      user.biologicalSex
+      user.biologicalSex,
     );
     const category = getBPCategory(estimate.systolic, estimate.diastolic);
 
@@ -428,7 +425,7 @@ router.get("/bp-readings", async (req: Request, res: Response) => {
 
     const readings = await dataStore.getBPReadings(
       userId as string,
-      days ? parseInt(days as string) : undefined
+      days ? parseInt(days as string) : undefined,
     );
 
     res.json({

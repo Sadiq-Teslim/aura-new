@@ -29,21 +29,25 @@ router.post(
       const analysis = await analyzeFood(imageBuffer);
 
       // Personalize the message based on user's BP if available
-      let personalizedMessage = analysis.message || analysis.details || "";
+      let personalizedMessage = analysis.message || "";
       if (userId) {
         try {
           const user = await dataStore.getUser(userId);
           const bpReadings = await dataStore.getBPReadings(userId, 7);
-          
+
           if (bpReadings.length > 0 && user) {
             const latestBP = bpReadings[0];
-            const avgSystolic = bpReadings.reduce((sum, r) => sum + r.systolic, 0) / bpReadings.length;
-            const avgDiastolic = bpReadings.reduce((sum, r) => sum + r.diastolic, 0) / bpReadings.length;
-            
+            const avgSystolic =
+              bpReadings.reduce((sum, r) => sum + r.systolic, 0) /
+              bpReadings.length;
+            const avgDiastolic =
+              bpReadings.reduce((sum, r) => sum + r.diastolic, 0) /
+              bpReadings.length;
+
             // Determine user's BP status
             const isHypertensive = avgSystolic >= 130 || avgDiastolic >= 80;
             const isHighRisk = avgSystolic >= 140 || avgDiastolic >= 90;
-            
+
             // Generate personalized message
             if (analysis.bpImpact === "high") {
               if (isHighRisk) {
@@ -92,8 +96,8 @@ router.post(
             analysis.bpImpact === "high"
               ? 0.8
               : analysis.bpImpact === "moderate"
-              ? 0.4
-              : 0.1;
+                ? 0.4
+                : 0.1;
           todayReading.foodImpact = foodImpact;
           await dataStore.addReading(userId, todayReading);
         }
@@ -112,7 +116,7 @@ router.post(
         error: { message: error.message, code: "FOOD_ANALYSIS_ERROR" },
       });
     }
-  }
+  },
 );
 
 /**
@@ -167,7 +171,7 @@ Return JSON with:
         extractionPrompt,
         language,
         healthContext,
-        userId
+        userId,
       );
 
       // Parse extracted data
@@ -186,15 +190,19 @@ Return JSON with:
 
         // Get user's BP readings for personalization
         const bpReadings = await dataStore.getBPReadings(userId, 7);
-        
+
         if (bpReadings.length > 0 && user) {
           const latestBP = bpReadings[0];
-          const avgSystolic = bpReadings.reduce((sum, r) => sum + r.systolic, 0) / bpReadings.length;
-          const avgDiastolic = bpReadings.reduce((sum, r) => sum + r.diastolic, 0) / bpReadings.length;
-          
+          const avgSystolic =
+            bpReadings.reduce((sum, r) => sum + r.systolic, 0) /
+            bpReadings.length;
+          const avgDiastolic =
+            bpReadings.reduce((sum, r) => sum + r.diastolic, 0) /
+            bpReadings.length;
+
           const isHypertensive = avgSystolic >= 130 || avgDiastolic >= 80;
           const isHighRisk = avgSystolic >= 140 || avgDiastolic >= 90;
-          
+
           if (bpImpact === "high") {
             if (isHighRisk) {
               message = `⚠️ ${user.name}, with your BP averaging ${Math.round(avgSystolic)}/${Math.round(avgDiastolic)}, this high-sodium meal (${sodium}mg) could significantly elevate your blood pressure. Consider a lighter alternative.`;
@@ -237,7 +245,8 @@ Return JSON with:
         analysis = {
           foodName: text.substring(0, 50),
           bpImpact: "low" as const,
-          message: "Food logged. Unable to analyze sodium content from description.",
+          message:
+            "Food logged. Unable to analyze sodium content from description.",
         };
       }
 
@@ -261,8 +270,8 @@ Return JSON with:
           analysis.bpImpact === "high"
             ? 0.8
             : analysis.bpImpact === "moderate"
-            ? 0.4
-            : 0.1;
+              ? 0.4
+              : 0.1;
         todayReading.foodImpact = foodImpact;
         await dataStore.addReading(userId, todayReading);
       }
@@ -277,8 +286,7 @@ Return JSON with:
         error: { message: error.message, code: "FOOD_VOICE_ERROR" },
       });
     }
-  }
+  },
 );
 
 export default router;
-
