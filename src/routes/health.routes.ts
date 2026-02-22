@@ -194,16 +194,16 @@ router.get("/css", async (req: Request, res: Response) => {
     }
 
     const readings = await dataStore.getReadings(userId as string);
-    const baseline = await dataStore.getBaseline(userId as string);
+    let baseline = await dataStore.getBaseline(userId as string);
 
+    // If baseline is missing, use default values
     if (!baseline) {
-      return res.status(404).json({
-        success: false,
-        error: {
-          message: "Baseline not found. Please set baseline first.",
-          code: "BASELINE_NOT_FOUND",
-        },
-      });
+      baseline = {
+        hrv: 50,
+        sedentaryHours: 5,
+        sleepQuality: 7,
+        screenStressIndex: 0,
+      };
     }
 
     const cssResult = calculateCSS(readings, baseline);
