@@ -24,16 +24,21 @@ router.post("/onboard", async (req: Request, res: Response) => {
     }
 
     // Normalize medications — frontend may send string like "No" or "Yes"
-    let meds = onboardingData.medications;
-    if (typeof meds === "string") {
-      meds = meds.toLowerCase() === "no" || meds === "" ? [] : [meds];
+    let meds: string[] = [];
+    const rawMeds = onboardingData.medications;
+    if (typeof rawMeds === "string") {
+      meds = (rawMeds as string).toLowerCase() === "no" || rawMeds === "" ? [] : [rawMeds as string];
+    } else if (Array.isArray(rawMeds)) {
+      meds = rawMeds;
     }
-    if (!Array.isArray(meds)) meds = [];
 
     // Normalize hasHypertension — frontend may send string "Yes"/"No"/"Not sure"
-    let hypertension = onboardingData.hasHypertension;
-    if (typeof hypertension === "string") {
-      hypertension = hypertension.toLowerCase() === "yes";
+    let hypertension: boolean | undefined;
+    const rawHypertension = onboardingData.hasHypertension;
+    if (typeof rawHypertension === "string") {
+      hypertension = (rawHypertension as string).toLowerCase() === "yes";
+    } else {
+      hypertension = rawHypertension as boolean | undefined;
     }
 
     const user = await dataStore.createUser({
@@ -41,8 +46,8 @@ router.post("/onboard", async (req: Request, res: Response) => {
       age: onboardingData.age,
       biologicalSex: onboardingData.biologicalSex,
       preferredLanguage: onboardingData.preferredLanguage,
-      hasHypertension: hypertension as boolean | undefined,
-      medications: meds as string[],
+      hasHypertension: hypertension,
+      medications: meds,
       smokes: onboardingData.smokes,
       drinksAlcohol: onboardingData.drinksAlcohol,
       activityLevel: onboardingData.activityLevel,

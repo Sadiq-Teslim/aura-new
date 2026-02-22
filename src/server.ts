@@ -37,7 +37,7 @@ app.use(
         mediaSrc: ["'self'", "blob:", "data:", "*"],
       },
     },
-  })
+  }),
 );
 
 // Additional CORS headers for audio routes (must come after helmet)
@@ -49,9 +49,7 @@ app.use("/api/audio", (req, res, next) => {
 
 // CORS configuration
 const corsOptions = {
-  origin: process.env.CORS_ORIGINS
-    ? process.env.CORS_ORIGINS.split(",")
-    : "*",
+  origin: process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(",") : "*",
   credentials: true,
 };
 app.use(cors(corsOptions));
@@ -120,7 +118,7 @@ app.use(errorHandler);
 if (process.env.NODE_ENV === "production") {
   // Trust proxy for rate limiting and security
   app.set("trust proxy", 1);
-  
+
   // Disable powered-by header
   app.disable("x-powered-by");
 }
@@ -130,11 +128,11 @@ app.listen(PORT, () => {
   console.log(`🚀 Cor API server running on port ${PORT}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-  
+
   // Check for required environment variables
   const requiredEnvVars = ["GROQ_API_KEY", "YARNGPT_API_KEY"];
   const missing = requiredEnvVars.filter((key) => !process.env[key]);
-  
+
   if (missing.length > 0) {
     console.warn(`⚠️  Missing environment variables: ${missing.join(", ")}`);
     console.warn("   Some features may not work without these keys.");
