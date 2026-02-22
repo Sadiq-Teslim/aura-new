@@ -411,4 +411,36 @@ router.get("/alerts", async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/health/bp-readings
+ * Get user's BP reading history
+ */
+router.get("/bp-readings", async (req: Request, res: Response) => {
+  try {
+    const { userId, days } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: { message: "User ID is required", code: "MISSING_USER_ID" },
+      });
+    }
+
+    const readings = await dataStore.getBPReadings(
+      userId as string,
+      days ? parseInt(days as string) : undefined
+    );
+
+    res.json({
+      success: true,
+      data: { readings },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: { message: error.message, code: "BP_READINGS_FETCH_ERROR" },
+    });
+  }
+});
+
 export default router;

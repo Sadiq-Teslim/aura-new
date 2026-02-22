@@ -28,8 +28,50 @@ router.post(
 
       const analysis = await analyzeFood(imageBuffer);
 
-      // Store food log
+      // Personalize the message based on user's BP if available
+      let personalizedMessage = analysis.message || analysis.details || "";
       if (userId) {
+        try {
+          const user = await dataStore.getUser(userId);
+          const bpReadings = await dataStore.getBPReadings(userId, 7);
+          
+          if (bpReadings.length > 0 && user) {
+            const latestBP = bpReadings[0];
+            const avgSystolic = bpReadings.reduce((sum, r) => sum + r.systolic, 0) / bpReadings.length;
+            const avgDiastolic = bpReadings.reduce((sum, r) => sum + r.diastolic, 0) / bpReadings.length;
+            
+            // Determine user's BP status
+            const isHypertensive = avgSystolic >= 130 || avgDiastolic >= 80;
+            const isHighRisk = avgSystolic >= 140 || avgDiastolic >= 90;
+            
+            // Generate personalized message
+            if (analysis.bpImpact === "high") {
+              if (isHighRisk) {
+                personalizedMessage = `⚠️ ${user.name}, with your recent BP averaging ${Math.round(avgSystolic)}/${Math.round(avgDiastolic)} mmHg, this high-sodium meal could significantly elevate your blood pressure. Consider a lighter alternative or drink extra water to help flush the sodium.`;
+              } else if (isHypertensive) {
+                personalizedMessage = `${user.name}, given your elevated BP trend (avg ${Math.round(avgSystolic)}/${Math.round(avgDiastolic)}), this meal's sodium content may worsen your readings. Try to balance with potassium-rich foods today.`;
+              } else {
+                personalizedMessage = `This meal is high in sodium. While your BP is currently stable (${latestBP.systolic}/${latestBP.diastolic}), frequent high-sodium meals can lead to elevated blood pressure over time.`;
+              }
+            } else if (analysis.bpImpact === "moderate") {
+              if (isHypertensive) {
+                personalizedMessage = `${user.name}, this meal has moderate BP impact. With your readings averaging ${Math.round(avgSystolic)}/${Math.round(avgDiastolic)}, consider reducing portions or avoiding added salt.`;
+              } else {
+                personalizedMessage = `This meal has moderate sodium content. Your recent BP (${latestBP.systolic}/${latestBP.diastolic}) is in a healthy range - keep maintaining balanced meals.`;
+              }
+            } else {
+              if (isHypertensive) {
+                personalizedMessage = `Great choice, ${user.name}! This heart-healthy meal can help with your BP management. Your readings have been averaging ${Math.round(avgSystolic)}/${Math.round(avgDiastolic)} - meals like this can help bring that down.`;
+              } else {
+                personalizedMessage = `Excellent choice! This meal supports healthy blood pressure. Your recent reading of ${latestBP.systolic}/${latestBP.diastolic} is great - keep it up!`;
+              }
+            }
+          }
+        } catch (e) {
+          // User data not available, use default message
+          console.warn("Could not personalize food impact:", e);
+        }
+
         const today = new Date().toISOString().split("T")[0];
         await dataStore.addFoodLog({
           userId,
@@ -59,7 +101,10 @@ router.post(
 
       res.json({
         success: true,
-        data: analysis,
+        data: {
+          ...analysis,
+          message: personalizedMessage,
+        },
       });
     } catch (error: any) {
       res.status(500).json({
@@ -135,10 +180,49 @@ Return JSON with:
 
         if (sodium > 2000) {
           bpImpact = "high";
-          message = `This meal is high in sodium (${sodium}mg). Given your readings this week, it may elevate your blood pressure over the next few hours. Consider drinking water and reducing salt at your next meal.`;
         } else if (sodium > 1000) {
           bpImpact = "moderate";
-          message = `This meal contains moderate sodium (${sodium}mg). Be mindful of your salt intake for the rest of the day.`;
+        }
+
+        // Get user's BP readings for personalization
+        const bpReadings = await dataStore.getBPReadings(userId, 7);
+        
+        if (bpReadings.length > 0 && user) {
+          const latestBP = bpReadings[0];
+          const avgSystolic = bpReadings.reduce((sum, r) => sum + r.systolic, 0) / bpReadings.length;
+          const avgDiastolic = bpReadings.reduce((sum, r) => sum + r.diastolic, 0) / bpReadings.length;
+          
+          const isHypertensive = avgSystolic >= 130 || avgDiastolic >= 80;
+          const isHighRisk = avgSystolic >= 140 || avgDiastolic >= 90;
+          
+          if (bpImpact === "high") {
+            if (isHighRisk) {
+              message = `⚠️ ${user.name}, with your BP averaging ${Math.round(avgSystolic)}/${Math.round(avgDiastolic)}, this high-sodium meal (${sodium}mg) could significantly elevate your blood pressure. Consider a lighter alternative.`;
+            } else if (isHypertensive) {
+              message = `${user.name}, this meal is high in sodium (${sodium}mg). Given your elevated BP trend (${Math.round(avgSystolic)}/${Math.round(avgDiastolic)}), try to balance with potassium-rich foods.`;
+            } else {
+              message = `This meal is high in sodium (${sodium}mg). Your BP is currently healthy (${latestBP.systolic}/${latestBP.diastolic}), but frequent high-sodium meals can elevate it over time.`;
+            }
+          } else if (bpImpact === "moderate") {
+            if (isHypertensive) {
+              message = `${user.name}, this meal has moderate sodium (${sodium}mg). With your BP at ${Math.round(avgSystolic)}/${Math.round(avgDiastolic)}, consider reducing portions.`;
+            } else {
+              message = `Moderate sodium content (${sodium}mg). Your BP is healthy at ${latestBP.systolic}/${latestBP.diastolic} - just be mindful of salt intake today.`;
+            }
+          } else {
+            if (isHypertensive) {
+              message = `Great choice, ${user.name}! This heart-healthy meal can help manage your BP (currently ${Math.round(avgSystolic)}/${Math.round(avgDiastolic)}).`;
+            } else {
+              message = `Excellent choice! This supports healthy BP. Your reading of ${latestBP.systolic}/${latestBP.diastolic} is great - keep it up!`;
+            }
+          }
+        } else {
+          // Default messages without personalization
+          if (bpImpact === "high") {
+            message = `This meal is high in sodium (${sodium}mg). It may elevate your blood pressure. Consider drinking water and reducing salt at your next meal.`;
+          } else if (bpImpact === "moderate") {
+            message = `This meal contains moderate sodium (${sodium}mg). Be mindful of your salt intake for the rest of the day.`;
+          }
         }
 
         analysis = {

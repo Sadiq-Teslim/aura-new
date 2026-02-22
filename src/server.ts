@@ -53,18 +53,27 @@ const allowedOrigins = process.env.CORS_ORIGINS
   : [];
 
 const corsOptions = {
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+  origin: (
+    origin: string | undefined,
+    callback: (err: Error | null, allow?: boolean) => void,
+  ) => {
     // Allow requests with no origin (mobile apps, curl, etc.)
     if (!origin) {
       return callback(null, true);
     }
     // Check if origin is in allowed list (also strip trailing slash from incoming origin)
     const normalizedOrigin = origin.replace(/\/$/, "");
-    if (allowedOrigins.length === 0 || allowedOrigins.includes(normalizedOrigin)) {
+    if (
+      allowedOrigins.length === 0 ||
+      allowedOrigins.includes(normalizedOrigin)
+    ) {
       return callback(null, true);
     }
     // For development, also allow localhost origins
-    if (normalizedOrigin.includes("localhost") || normalizedOrigin.includes("127.0.0.1")) {
+    if (
+      normalizedOrigin.includes("localhost") ||
+      normalizedOrigin.includes("127.0.0.1")
+    ) {
       return callback(null, true);
     }
     callback(new Error("Not allowed by CORS"));
