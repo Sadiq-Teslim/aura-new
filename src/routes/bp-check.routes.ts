@@ -117,8 +117,8 @@ router.post("/", async (req: Request, res: Response) => {
       heartRate,
       sedentaryHours: todayReading?.sedentaryHours ?? 0,
       sleepQuality: todayReading?.sleepQuality ?? 7,
-      screenStressIndex: todayReading?.screenStressIndex ?? null,
-      foodImpact: todayReading?.foodImpact ?? null,
+      screenStressIndex: todayReading?.screenStressIndex ?? undefined,
+      foodImpact: todayReading?.foodImpact ?? undefined,
     });
 
     res.json({
