@@ -48,7 +48,7 @@ export async function generateResponse(
   transcript: string,
   language: string,
   healthContext: HealthContext,
-  userId?: string
+  userId?: string,
 ): Promise<string> {
   try {
     // Get additional context if userId provided
@@ -96,6 +96,7 @@ CRITICAL RULES:
 - Talk about cardiovascular stress trends and trajectories, not snapshots
 - Maximum 3 sentences per response
 - Be warm, specific, and actionable
+- Reference the user's ACTUAL data when answering questions about their health
 
 Current user health context:
 - Cardiovascular Stress Score (CSS): ${healthContext.css} / 100
@@ -105,7 +106,7 @@ Current user health context:
 - Sedentary hours today: ${healthContext.sedentaryHours}
 - Sleep quality last night: ${healthContext.sleepQuality} / 10
 - Consecutive worsening days: ${healthContext.worseningDays}
-- Screen stress index: ${healthContext.screenStressIndex || 0}${additionalContext}`;
+- Screen stress index: ${healthContext.screenStressIndex || 0}${(healthContext as any).additionalData || ""}${additionalContext}`;
 
     const groq = getGroqClient();
     const response = await groq.chat.completions.create({
@@ -135,7 +136,7 @@ Current user health context:
  */
 export async function extractSleepQuality(
   transcript: string,
-  language: string
+  language: string,
 ): Promise<{ sleepQuality: number; extractedInfo: string }> {
   try {
     const systemPrompt = `You are a health data extraction assistant. Extract sleep quality information from the user's natural language response.
@@ -175,7 +176,8 @@ Return ONLY a JSON object with this structure:
 
     return {
       sleepQuality: Math.max(0, Math.min(10, parsed.sleepQuality || 5)),
-      extractedInfo: parsed.summary || "No specific sleep information extracted",
+      extractedInfo:
+        parsed.summary || "No specific sleep information extracted",
     };
   } catch (error: any) {
     // Fallback to neutral score if extraction fails
@@ -191,7 +193,7 @@ Return ONLY a JSON object with this structure:
  */
 export async function generateProactiveAlert(
   language: string,
-  healthContext: HealthContext
+  healthContext: HealthContext,
 ): Promise<string> {
   try {
     const systemPrompt = `You are Cor, a proactive cardiovascular health companion.
@@ -218,7 +220,8 @@ Be warm, supportive, and actionable.`;
         },
         {
           role: "user",
-          content: "Generate a proactive health alert based on my current trends.",
+          content:
+            "Generate a proactive health alert based on my current trends.",
         },
       ],
       temperature: 0.7,
